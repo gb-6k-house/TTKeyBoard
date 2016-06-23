@@ -17,6 +17,13 @@
  *  @return 
  */
 #import <Foundation/Foundation.h>
+#import <UIKit/UITextField.h>
+//texfield增加输入限制
+IB_DESIGNABLE
+@interface UITextField (LimitExtension)
+@property IBInspectable NSInteger limit;
+@end
+
 @interface TTKeyBoardManager : NSObject
 + (instancetype)sharedInstance;
 //是否开启功能

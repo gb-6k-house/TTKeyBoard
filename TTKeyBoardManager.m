@@ -13,7 +13,22 @@
 #import <UIKit/UIWindow.h>
 #import <UIKit/UIViewController.h>
 #import <UIKit/UIScreen.h>
+#import <objc/runtime.h>
 
+@implementation UITextField (LimitExtension)
+-(NSInteger)limit{
+    NSNumber *obj = objc_getAssociatedObject(self, @"_LIMIT_");
+    if (obj) {
+        return [obj integerValue];
+    }else{
+        return -1;
+    }
+
+}
+-(void)setLimit:(NSInteger)limit{
+    objc_setAssociatedObject(self, @"_LIMIT_", @(limit), OBJC_ASSOCIATION_RETAIN);
+}
+@end
 @interface TTKeyBoardManager()<UIGestureRecognizerDelegate>{
     UIView *_textFieldView;
     UITapGestureRecognizer  *_tapGesture;
@@ -64,6 +79,8 @@
             //  Registering for textField notification.
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidBeginEditing:) name:UITextFieldTextDidBeginEditingNotification object:nil];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidEndEditing:) name:UITextFieldTextDidEndEditingNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidChange:) name:UITextFieldTextDidChangeNotification object: nil];
+
             _tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapRecognized:)];
             [_tapGesture setDelegate:self];
             _enable = NO;
@@ -73,7 +90,13 @@
     }
     return self;
 }
-
+-(void)textFieldViewDidChange:(NSNotification*)notification {
+    UITextField *textField = (UITextField *)notification.object;
+    NSInteger number = textField.limit;
+    if (number >= 0 && textField.text.length > number && textField.markedTextRange == nil) {
+        textField.text = [textField.text substringWithRange: NSMakeRange(0, number)];
+    }
+}
 -(void)keyboardWillShow:(NSNotification*)aNotification
 {
     //_kbShowNotification = aNotification;
