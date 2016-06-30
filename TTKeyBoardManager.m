@@ -14,6 +14,10 @@
 #import <UIKit/UIViewController.h>
 #import <UIKit/UIScreen.h>
 #import <objc/runtime.h>
+@interface TTKeyBoardManager(){
+    CGFloat _centerYOffset;
+}
+@end
 
 @implementation UITextField (LimitExtension)
 -(NSInteger)limit{
@@ -23,7 +27,7 @@
     }else{
         return -1;
     }
-
+    
 }
 -(void)setLimit:(NSInteger)limit{
     objc_setAssociatedObject(self, @"_LIMIT_", @(limit), OBJC_ASSOCIATION_RETAIN);
@@ -80,12 +84,12 @@
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidBeginEditing:) name:UITextFieldTextDidBeginEditingNotification object:nil];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidEndEditing:) name:UITextFieldTextDidEndEditingNotification object:nil];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textFieldViewDidChange:) name:UITextFieldTextDidChangeNotification object: nil];
-
+            
             _tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapRecognized:)];
             [_tapGesture setDelegate:self];
             _enable = NO;
-
-
+            
+            
         });
     }
     return self;
@@ -102,6 +106,7 @@
     //_kbShowNotification = aNotification;
     if (_enable == NO)	return;
     //获取键盘的高度
+    
     NSDictionary *userInfo = [aNotification userInfo];
     CGRect keyboardRect = [[userInfo objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
     CGFloat keyBoardEndY = keyboardRect.origin.y;
@@ -109,32 +114,40 @@
     UIView *firstResponder = _textFieldView;
     UIView *ctrView = [_textFieldView viewController].view;
     CGFloat txtCodeY = CGRectGetMaxY([firstResponder.superview convertRect:firstResponder.frame toView:ctrView]);
-    CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+    //保留view初始的位置
+    //_origCenter = ctrView.center;
     
+    [self resetPosition];
     if (keyBoardEndY < txtCodeY) {
+        _centerYOffset = txtCodeY - keyBoardEndY + 4;
         NSNumber *duration = [userInfo objectForKey:UIKeyboardAnimationDurationUserInfoKey];
         NSNumber *curve = [userInfo objectForKey:UIKeyboardAnimationCurveUserInfoKey];
         [UIView animateWithDuration:duration.doubleValue animations:^{
             [UIView setAnimationBeginsFromCurrentState:YES];
             [UIView setAnimationCurve:[curve intValue]];
-            ctrView.center = CGPointMake(ctrView.center.x, (screenH/2 - (txtCodeY - keyBoardEndY)) - 4);//Y值上移偏差＝输入框最大Y值－键盘初始Y值
+            ctrView.center = CGPointMake(ctrView.center.x, ctrView.center.y - _centerYOffset);//Y值上移偏差＝输入框最大Y值－键盘初始Y值
         }];
+    };
+    
+    
+}
+-(void)resetPosition{
+    UIView *ctrView = [_textFieldView viewController].view;
+    if (_centerYOffset > 0) {
+        ctrView.center = CGPointMake(ctrView.center.x, ctrView.center.y + _centerYOffset);//复位
+        _centerYOffset = 0;
     }
-
+    
 }
 - (void)keyboardWillHide:(NSNotification*)aNotification{
     if (_enable == NO)	return;
-    UIView *ctrView = [_textFieldView viewController].view;
-    ctrView.center = CGPointMake([UIScreen mainScreen].bounds.size.width/2, [UIScreen mainScreen].bounds.size.height/2);
-
+    [self resetPosition];
+    
 }
 
 
 - (void)keyboardDidHide:(NSNotification*)aNotification{
     
-}
--(void)hideKeyBoard{
-    [_tapGesture.view endEditing:NO];
 }
 #pragma mark - UITextFieldView Delegate methods
 
@@ -143,13 +156,13 @@
     if (_enable == NO)	return;
     _textFieldView = notification.object;
     [[_textFieldView viewController].view addGestureRecognizer:_tapGesture];
-
+    
 }
 -(void)textFieldViewDidEndEditing:(NSNotification*)notification{
     if (_enable == NO)	return;
     [[_textFieldView viewController].view removeGestureRecognizer:_tapGesture];
     _textFieldView = nil;
-
+    
 }
 
 
@@ -161,6 +174,9 @@
     {
         [gesture.view endEditing:YES];
     }
+}
+-(void)hideKeyBoard{
+    [_tapGesture.view endEditing:NO];
 }
 
 
